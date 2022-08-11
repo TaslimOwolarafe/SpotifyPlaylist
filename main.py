@@ -12,13 +12,13 @@ auth_data = {
     'response_type': 'code',
     'client_id': f'{client_id}',
     'scope':'playlist-modify-public playlist-modify-private',
-    'redirect_uri':'https://TaslimOwolarafe.github.io/',
+    'redirect_uri':'http://127.0.0.1:8000/',
     "state": state
 }
 
 
 
-# print(f"{auth_url}?{urlencode(auth_data)}")
+print(f"{auth_url}?{urlencode(auth_data)}")
 auth_response = requests.get(f"{auth_url}?{urlencode(auth_data)}")
 # # response = requests.post(auth_url, urlencode(auth_data))
 print(auth_response)
@@ -30,7 +30,7 @@ auth_code = "AQBnyA5clqUpGoWWvAJ_2UFZzhemywCQjirSV4inBpJsY-Gmc6MI3oqlLLWYMbZGKHa
 
 token_data = {
     "code": auth_code,
-    'redirect_uri':'https://TaslimOwolarafe.github.io/',
+    'redirect_uri':'http://127.0.0.1:8000/',
     "grant_type": 'authorization_code'
 }
 
