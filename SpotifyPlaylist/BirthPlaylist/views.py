@@ -1,6 +1,3 @@
-from email import header
-from glob import glob
-from urllib import response
 from django.shortcuts import render
 from django.http import HttpResponseRedirect, HttpResponse, JsonResponse
 from django.urls import reverse_lazy, reverse
@@ -12,7 +9,7 @@ load_dotenv()
 import base64, requests
 from urllib.parse import urlencode
 
-import random
+import random, json
 import string
 # Create your views here.
 
@@ -23,8 +20,8 @@ def get_random_string(length):
     result_str = ''.join(random.choice(letters) for i in range(length))
     return result_str
 
-code = ''
-state = ''
+# code = ''
+# state = ''
 
 client_id = os.getenv("client_id")
 client_secret = os.getenv('client_secret')
@@ -62,12 +59,16 @@ def home(request):
     code = request.GET.get('code', '')
     global state
     state = request.GET.get('state', '')
+    # print(request.COOKIES.get('id'))
     # return render(request, 'BirthPlaylist/home.html', context={'code':code, 'state':state})
     # return HttpResponseRedirect(reverse("callback", args=[code, state]))
-    return HttpResponseRedirect(reverse("callback", args=[state]))
+    home_response = HttpResponseRedirect(reverse("callback", args=[state]))
+    home_response.set_cookie('code', code)
+    home_response.set_cookie('state', state)
+    return home_response
 
-access_token = ''
-refresh_token = ''
+# access_token = ''
+# refresh_token = ''
 # def callback(request, code, state):
 def callback(request, state):
     client_creds = f'{client_id}:{client_secret}'
@@ -90,9 +91,7 @@ def callback(request, state):
     token_response = requests.post(token_url, data=token_data, headers=token_headers)
     response = token_response.json()
     # print(response, "\n")
-    global access_token
     access_token = response['access_token']
-    global refresh_token
     refresh_token = response['refresh_token']
     # token_type = response['token_type']
     # access_token = response['access_token']
@@ -103,7 +102,12 @@ def callback(request, state):
     # return JsonResponse({'access_token':access_token, 'token_type':token_type,
     # 'expires_in':expires_in, 'refresh_token':refresh_token, 'scope':scope})
     data = JsonResponse(response)
-    return render(request, 'BirthPlaylist/callback.html')
+    print(request.COOKIES.get('id'))
+    # return render(request, 'BirthPlaylist/callback.html')
+    callback_response = HttpResponseRedirect(reverse("me_playlist"))
+    callback_response.set_cookie('access_token', access_token)
+    callback_response.set_cookie('refresh_token', refresh_token)
+    return callback_response
 
 # username = ''
 
@@ -120,6 +124,7 @@ def callback(request, state):
 #     return JsonResponse(response)
 
 def me_playlist(request):
+    access_token = request.COOKIES.get('access_token')
     headers = {
         'Authorization':f'Bearer {access_token}'
     }
@@ -147,14 +152,20 @@ def me_playlist(request):
         response = playlist_response.json()
         # playlists = JsonResponse(response)
         playlists = response
-        return render(request, "BirthPlaylist/playlists.html", context={'playlists':playlists, 'display_name':display_name, 'id':id,
+        Playlists = render(request, "BirthPlaylist/playlists.html", context={'playlists':playlists, 'display_name':display_name, 'id':id,
             'image_url':image_url})
+        Playlists.set_cookie('id', id)
+        # return render(request, "BirthPlaylist/playlists.html", context={'playlists':playlists, 'display_name':display_name, 'id':id,
+        #     'image_url':image_url})
+        return Playlists
 
 def refresh(request):
     refresh_headers = {
         'Authorization': f'Basic {base64_client_cred}',
         'Content-Type': "application/x-www-form-urlencoded"
     }
+
+    refresh_token = request.COOKIES.get('refresh_token')
     refresh_data = {
         'grant_type': 'refresh_token',
         'refresh_token': f'{refresh_token}'
@@ -163,9 +174,11 @@ def refresh(request):
     token_request = requests.post(token_url, data=refresh_data, headers=refresh_headers)
     response = token_request.json()
     print(response)
-    global access_token
     access_token = response['access_token']
-    return HttpResponseRedirect(reverse(request.path, args=[state]))
+    print(request)
+    refresh_response = HttpResponseRedirect(reverse("me_playlist"))
+    refresh_response.set_cookie('access_token', access_token)
+    return refresh_response
 
 def search(request):
 
