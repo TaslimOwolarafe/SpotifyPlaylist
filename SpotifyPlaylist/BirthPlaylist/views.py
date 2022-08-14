@@ -33,8 +33,20 @@ token_url = "https://accounts.spotify.com/api/token"
 track_url = 'https://api.spotify.com/v1/tracks'
 user_url = "https://api.spotify.com/v1/me/"
 user_playlists_url = "https://api.spotify.com/v1/me/playlists"
+account_playlists_url = "https://api.spotify.com/v1/users/{}/playlists"
+search_url = "https://api.spotify.com/v1/search"
+personal_url = "https://api.spotify.com/v1/me/top/{}"
+# spotify_account_id = 'https://open.spotify.com/user/spotify?si=c9a85eeb1011418c'
 
 base64_client_cred = ''
+
+def get_resource_headers(request):
+    access_token = request.COOKIES.get('access_token')
+    headers = {
+        "Authorization" : f"Bearer {access_token}"
+    }
+    return headers
+
 
 def index(request):
     return render(request, 'BirthPlaylist/index.html')
@@ -93,14 +105,6 @@ def callback(request, state):
     # print(response, "\n")
     access_token = response['access_token']
     refresh_token = response['refresh_token']
-    # token_type = response['token_type']
-    # access_token = response['access_token']
-    # expires_in = response['expires_in']
-    # refresh_token = response['refresh_token']
-    # scope = response['scope']
-
-    # return JsonResponse({'access_token':access_token, 'token_type':token_type,
-    # 'expires_in':expires_in, 'refresh_token':refresh_token, 'scope':scope})
     data = JsonResponse(response)
     print(request.COOKIES.get('id'))
     # return render(request, 'BirthPlaylist/callback.html')
@@ -109,19 +113,6 @@ def callback(request, state):
     callback_response.set_cookie('refresh_token', refresh_token)
     return callback_response
 
-# username = ''
-
-# def me(request):
-#     headers= {
-#         'Authorization':f'Bearer {access_token}'
-#     }
-#     me_response = requests.get(user_url, headers=headers)
-#     response = me_response.json()
-#     print(response)
-#     global username
-#     username = response['display_name']
-#     print(username)
-#     return JsonResponse(response)
 
 def me_playlist(request):
     access_token = request.COOKIES.get('access_token')
@@ -131,8 +122,8 @@ def me_playlist(request):
 
     me_response = requests.get(user_url, headers=headers)
     response_me = me_response.json()
-    print(response_me)
-    print(me_response.status_code)
+    # print(response_me)
+    # print(me_response.status_code)
     if response_me.get('error') or me_response.status_code != 200:
 
         ## refresh token and redirect.. tell user token expired
@@ -141,22 +132,16 @@ def me_playlist(request):
         
         display_name = response_me['display_name']
         id = response_me['id']
-        print(display_name, "\t", id)
         if len(response_me['images']) == 0:
             image_url = "{% static 'images/skateboard.jpg' %}"
         else:
             image_url = response_me['images'][0]['url']
-        # print(response_me['images'][0]['url'])
-        # print(len(response_me['images']))
         playlist_response = requests.get(user_playlists_url, headers=headers)
         response = playlist_response.json()
-        # playlists = JsonResponse(response)
         playlists = response
         Playlists = render(request, "BirthPlaylist/playlists.html", context={'playlists':playlists, 'display_name':display_name, 'id':id,
             'image_url':image_url})
         Playlists.set_cookie('id', id)
-        # return render(request, "BirthPlaylist/playlists.html", context={'playlists':playlists, 'display_name':display_name, 'id':id,
-        #     'image_url':image_url})
         return Playlists
 
 def refresh(request):
@@ -174,12 +159,42 @@ def refresh(request):
     token_request = requests.post(token_url, data=refresh_data, headers=refresh_headers)
     response = token_request.json()
     print(response)
+    if response.get('error') == 'invalid_client':
+        return HttpResponseRedirect(reverse("index"))
     access_token = response['access_token']
-    print(request)
-    refresh_response = HttpResponseRedirect(reverse("me_playlist"))
+    print(request.path_info)
+    print(request.META['HTTP_REFERER'])
+    # refresh_response = HttpResponseRedirect(reverse("me_playlist"))
+    refresh_response = HttpResponseRedirect(request.META['HTTP_REFERER'])
     refresh_response.set_cookie('access_token', access_token)
     return refresh_response
 
 def search(request):
+    headers = get_resource_headers(request)
+    params = {'q':'6', 'type':'playlist,artist'}
+    # params = {'q':' ', 'type':'track'}
+    search_response = requests.get(search_url, headers=headers, params=params)
+    if search_response.json().get('error') or search_response.status_code != 200:
+        return HttpResponseRedirect(reverse("refresh"))
+    all_playlists = search_response.json()['playlists']
+    all_artists = search_response.json()['artists']
+    return render(request, "BirthPlaylist/search.html", context={'all_playlists':all_playlists, 'all_artists':all_artists})
 
-    return
+def personalization(request):
+    headers = get_resource_headers(request)
+    # print(personal_url.format("artists")) 
+    person_response = requests.get(personal_url.format("track"), headers=headers)
+    print(person_response)
+    return HttpResponse(person_response.text)
+
+def tracks(request):
+    access_token = request.COOKIES.get('access_token')
+    headers = {
+        'Authorization':f'Bearer {access_token}',
+        'Accept': 'application/json',
+        'Content-Type':'application/json'
+    }
+
+    track_response = requests.get(track_url, headers=headers)
+    # if response.get('error')
+    return JsonResponse(track_response.json())
