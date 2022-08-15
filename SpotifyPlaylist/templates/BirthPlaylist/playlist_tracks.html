@@ -1,0 +1,12 @@
+{% extends 'BirthPlaylist/base.html' %}
+
+{% block title %}tracks{% endblock %}
+
+{% block body %}
+{% for track in tracks.items %}
+<h5 style="margin: 8px 0px;">{{ track.track.name }} -  {{ track.track.album.release_date }}</h5>
+{% for artist in track.track.artists %}
+{{ artist.name }}
+{% endfor %}
+{% endfor %}
+{% endblock %}

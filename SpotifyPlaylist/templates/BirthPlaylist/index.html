@@ -1,0 +1,8 @@
+{% extends 'BirthPlaylist/base.html' %}
+
+{% block title %}Welcome{% endblock %}
+
+{% block body %}
+<h1>WELCOME!</h1>
+<a href="{% url 'auth' %}" class="btn btn-primary">Login to spotify</a>
+{% endblock %}

@@ -1,0 +1,24 @@
+{% extends 'BirthPlaylist/base.html' %}
+
+{% block title %}search{% endblock %}
+
+{% block body %}
+<h5>Artists</h5>
+{% for artist in all_artists.items %}
+<p>{{ artist.name }}</p>
+{% endfor %}
+<br>
+<h5>Playlists</h5>
+{% for playlist in all_playlists.items %}
+<p style="display: inline-block;">{{ playlist.name }}, {{ playlist.owner.display_name }}</p> <a href="{% url 'playlist_tracks' playlist.id %}" class="btn btn-outline-primary">tracks</a>
+<!-- <p>{{ playlist.id }}</p> -->
+<br>
+{% endfor %}
+<br>
+<h5>Albums</h5>
+{% for album in albums.items %}
+<p>{{ album }}</p>
+<!-- <p>{{ album.name }}, {{ album.artists.0.name }}, {{ album.release_date }}</p> -->
+{% endfor %}
+
+{% endblock %}

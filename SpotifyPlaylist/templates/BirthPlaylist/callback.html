@@ -1,0 +1,8 @@
+{% extends 'BirthPlaylist/base.html' %}
+
+{% block title %}callback{% endblock %}
+
+{% block body %}
+<!-- <a href="{url 'me'}" class="btn btn-primary">Profile</a> -->
+<a href="{% url 'me_playlist' %}" class="btn btn-primary">Playlists</a>
+{% endblock %}

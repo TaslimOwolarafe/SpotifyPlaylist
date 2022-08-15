@@ -1,3 +1,5 @@
+from email import header
+from wsgiref import headers
 from django.shortcuts import render
 from django.http import HttpResponseRedirect, HttpResponse, JsonResponse
 from django.urls import reverse_lazy, reverse
@@ -30,12 +32,14 @@ redirect_uri = os.getenv("redirect_uri")
 auth_url = "https://accounts.spotify.com/authorize"
 token_url = "https://accounts.spotify.com/api/token"
 
-track_url = 'https://api.spotify.com/v1/tracks'
+tracks_url = 'https://api.spotify.com/v1/tracks'
 user_url = "https://api.spotify.com/v1/me/"
 user_playlists_url = "https://api.spotify.com/v1/me/playlists"
 account_playlists_url = "https://api.spotify.com/v1/users/{}/playlists"
 search_url = "https://api.spotify.com/v1/search"
 personal_url = "https://api.spotify.com/v1/me/top/{}"
+
+playlist_tracks_url = "https://api.spotify.com/v1/playlists/{}/tracks"
 # spotify_account_id = 'https://open.spotify.com/user/spotify?si=c9a85eeb1011418c'
 
 base64_client_cred = ''
@@ -47,6 +51,17 @@ def get_resource_headers(request):
     }
     return headers
 
+def get_resource(request, _id, resource_type='albums'):
+    endpoint = f"https://api.spotify.com/v1/{resource_type}/{_id}"
+    headers = get_resource_headers(request)
+    response = requests.get(endpoint, headers=headers)
+    return response
+
+def perform_search(request, query=None, type='artist'):
+    headers = get_resource_headers(request)
+    params = {'q':query, 'type':type}
+    response = requests.get(search_url, headers=headers, params=params)
+    return response
 
 def index(request):
     return render(request, 'BirthPlaylist/index.html')
@@ -127,7 +142,7 @@ def me_playlist(request):
     if response_me.get('error') or me_response.status_code != 200:
 
         ## refresh token and redirect.. tell user token expired
-        return JsonResponse(response_me)
+        return HttpResponseRedirect(reverse("index"))
     else:
         
         display_name = response_me['display_name']
@@ -170,15 +185,23 @@ def refresh(request):
     return refresh_response
 
 def search(request):
-    headers = get_resource_headers(request)
-    params = {'q':'6', 'type':'playlist,artist'}
-    # params = {'q':' ', 'type':'track'}
-    search_response = requests.get(search_url, headers=headers, params=params)
+    # query will be done dynamiclly later
+    search_response = perform_search(request, query='m',type='playlist,artist,album')
     if search_response.json().get('error') or search_response.status_code != 200:
         return HttpResponseRedirect(reverse("refresh"))
     all_playlists = search_response.json()['playlists']
     all_artists = search_response.json()['artists']
-    return render(request, "BirthPlaylist/search.html", context={'all_playlists':all_playlists, 'all_artists':all_artists})
+    albums = search_response.json()['albums']
+
+    return render(request, "BirthPlaylist/search.html", context={'all_playlists':all_playlists, 'all_artists':all_artists, 'albums':albums})
+
+def playlist_tracks(request, _id):
+    playlist_response = requests.get(playlist_tracks_url.format(_id), headers=get_resource_headers(request))
+    if playlist_response.json().get('error') or playlist_response.status_code != 200:
+        return HttpResponseRedirect(reverse("refresh"))
+    tracks = playlist_response.json()
+    # return JsonResponse(playlist_response.json())
+    return render(request, "BirthPlaylist/playlist_tracks.html", context={'tracks':tracks})
 
 def personalization(request):
     headers = get_resource_headers(request)
@@ -188,13 +211,9 @@ def personalization(request):
     return HttpResponse(person_response.text)
 
 def tracks(request):
-    access_token = request.COOKIES.get('access_token')
-    headers = {
-        'Authorization':f'Bearer {access_token}',
-        'Accept': 'application/json',
-        'Content-Type':'application/json'
-    }
-
-    track_response = requests.get(track_url, headers=headers)
+    headers = get_resource_headers(request)
+    track_response = requests.get(tracks_url, headers=headers)
+    if track_response.json().get('error') or track_response.status_code != 200:
+        return HttpResponseRedirect(reverse("refresh"))
     # if response.get('error')
     return JsonResponse(track_response.json())
