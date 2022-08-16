@@ -13,6 +13,7 @@ from urllib.parse import urlencode
 
 import random, json
 import string
+import datetime as dt
 # Create your views here.
 
 
@@ -186,14 +187,30 @@ def refresh(request):
 
 def search(request):
     # query will be done dynamiclly later
-    search_response = perform_search(request, query='m',type='playlist,artist,album')
+    # search_response = perform_search(request, query={'month':'12','day':'17'},type='playlist,artist,album')
+    search_response = perform_search(request, query={'year':'2015'},type='track,album,playlist,artist')
+    # print(search_response.json())
     if search_response.json().get('error') or search_response.status_code != 200:
         return HttpResponseRedirect(reverse("refresh"))
-    all_playlists = search_response.json()['playlists']
-    all_artists = search_response.json()['artists']
-    albums = search_response.json()['albums']
 
-    return render(request, "BirthPlaylist/search.html", context={'all_playlists':all_playlists, 'all_artists':all_artists, 'albums':albums})
+    required_data= []
+    playlists = search_response.json()['playlists']
+    # playlist_url = 
+    artists = search_response.json()['artists']
+    albums = search_response.json()['albums']
+    tracks = search_response.json()['tracks']
+
+    for track in tracks['items']:
+        release_date = track['album']['release_date']
+        # print(release_date)
+        d = dt.datetime.strptime(release_date, "%Y-%m-%d")
+        # print(d.month)
+        if d.month == 3:
+            required_data.append(track)
+        
+    print(required_data)
+
+    return render(request, "BirthPlaylist/search.html", context={'albums':albums, 'tracks':tracks, 'playlists':playlists, 'artists':artists, 'required_data':required_data})
 
 def playlist_tracks(request, _id):
     playlist_response = requests.get(playlist_tracks_url.format(_id), headers=get_resource_headers(request))
