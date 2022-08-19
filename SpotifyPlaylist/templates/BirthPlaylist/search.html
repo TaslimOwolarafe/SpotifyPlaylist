@@ -3,27 +3,11 @@
 {% block title %}search{% endblock %}
 
 {% block body %}
-<h6>{{ required_data }}</h6>
-<h5>Tracks</h5>
+<a href="{% url 'create_playlist' %}" class="btn btn-outline-primary">Create</a><br>
+{% for item in required_data %}
+<h6>{{ item }}</h6>
+{% endfor %}
+<!-- <h6>{{ required_data }}</h6> -->
 
-{% for i in tracks.items %}
-<!-- {{ tracks }} <br><br> -->
-{{ i.album.release_date }} <br><br>
-{% endfor %}
-<br>
-<h5>Playlists</h5>
-{{ playlists }}
-{% for playlist in playlists.items %}
-<p style="display: inline-block;">{{ playlist.name }}, {{ playlist.owner.display_name }}</p> <a href="{% url 'playlist_tracks' playlist.id %}" class="btn btn-outline-primary">tracks</a>
-<!-- <p>{{ playlist.id }}</p> -->
-<br>
-{% endfor %}
-<br>
-<h5>Albums</h5>
-{{ albums }}
-{% for album in albums.items %}
-<!-- <p>{{ album }}</p> -->
-<p>{{ album.name }}, {{ album.artists.0.name }}, {{ album.release_date }}</p>
-{% endfor %}
 
 {% endblock %}
